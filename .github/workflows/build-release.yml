@@ -143,16 +143,16 @@ jobs:
           body: |
             ## iHostMC v${{ steps.version.outputs.version }}
 
-            Minecraft server host — create, run, and back up servers. In-app updates enabled for Windows.
+            Minecraft server manager — create, run, and back up servers. Share with friends via iHost relay (no port forwarding). In-app updates enabled for Windows.
 
-            ### Downloads (assets below)
+            ### Downloads
 
             **Windows**
-            - **Installer (recommended):** [iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe) — NSIS installer, in-app updater
-            - **MSI:** `iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi` (in Assets below)
+            - **[iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe)** — NSIS installer (recommended), supports in-app updater
+            - **[iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi)** — MSI installer
 
             **Linux**
-            - `.deb`, `.rpm`, or tarball — see Assets below.
+            - Check **Assets** below for `.deb` (Debian/Ubuntu), `.rpm` (Fedora/RHEL), or tarball.
 
             ### Updating
             Open iHostMC → it will prompt when a new version is available, or download the latest installer from this release.
