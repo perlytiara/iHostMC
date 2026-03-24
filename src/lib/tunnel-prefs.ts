@@ -4,7 +4,7 @@
  */
 
 import { RELAY_PUBLIC_TOKEN } from "./relay-token.generated";
-import { api, isBackendConfigured } from "./api-client";
+import { api, getApiBaseUrl, isBackendConfigured } from "./api-client";
 
 const KEY_FRP_API_BASE = "ihostmc_frp_api_base_url";
 const KEY_FRP_SERVER_ADDR = "ihostmc_frp_server_addr";

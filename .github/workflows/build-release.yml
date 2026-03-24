@@ -143,19 +143,38 @@ jobs:
           body: |
             ## iHostMC v${{ steps.version.outputs.version }}
 
-            Minecraft server manager — create, run, and back up servers. Share with friends via iHost relay (no port forwarding). In-app updates enabled for Windows.
+            Minecraft server manager — create, run, and back up servers. Share with friends via the iHost relay (no port forwarding). In-app updates are enabled on **Windows**.
+
+            ### Highlights
+
+            - **Relay / Share server:** fixed missing `getApiBaseUrl` import so relay configuration resolves correctly.
+
+            ---
 
             ### Downloads
 
-            **Windows**
-            - **[iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe)** — NSIS installer (recommended), supports in-app updater
-            - **[iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi)** — MSI installer
+            **Windows (x64)**
 
-            **Linux**
-            - Check **Assets** below for `.deb` (Debian/Ubuntu), `.rpm` (Fedora/RHEL), or tarball.
+            | File | Notes |
+            |------|--------|
+            | **[iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64-setup.exe)** | NSIS installer (recommended); supports the in-app updater |
+            | **[iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64_en-US.msi)** | MSI installer |
+            | **[latest.json](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/latest.json)** | Updater manifest used by the app |
+
+            **Linux (x86_64)**
+
+            | File | Notes |
+            |------|--------|
+            | **[iHostMC_${{ steps.version.outputs.version }}_amd64.deb](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_amd64.deb)** | Debian, Ubuntu, Mint, Pop!_OS, etc. Install: `sudo apt install ./iHostMC_${{ steps.version.outputs.version }}_amd64.deb` (or use your GUI package installer) |
+            | **[iHostMC-${{ steps.version.outputs.version }}-1.x86_64.rpm](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC-${{ steps.version.outputs.version }}-1.x86_64.rpm)** | Fedora, RHEL, Alma, Rocky, openSUSE. Install: `sudo dnf install ./iHostMC-${{ steps.version.outputs.version }}-1.x86_64.rpm` (or `zypper` / `rpm` as appropriate) |
+
+            Each `.exe`, `.msi`, `.deb`, and `.rpm` has a matching **`.sig`** file in **Assets** for optional signature verification ([Tauri signing](https://v2.tauri.app/distribute/#signing)).
+
+            ---
 
             ### Updating
-            Open iHostMC → it will prompt when a new version is available, or download the latest installer from this release.
+
+            On Windows, open iHostMC — it will offer an update when a newer build is available — or reinstall from the **NSIS** link above. On Linux, install the new `.deb` or `.rpm` over the previous version.
           draft: false
           files: |
             artifacts/windows/**
