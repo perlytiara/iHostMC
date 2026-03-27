@@ -84,6 +84,22 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
+      - name: Rename macOS ARM64 updater archive
+        if: matrix.artifact == 'macos-arm64-bundle'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MAC_DIR="src-tauri/target/release/bundle/macos"
+          mv "$MAC_DIR/iHostMC.app.tar.gz" "$MAC_DIR/iHostMC_${VERSION}_aarch64.app.tar.gz"
+          mv "$MAC_DIR/iHostMC.app.tar.gz.sig" "$MAC_DIR/iHostMC_${VERSION}_aarch64.app.tar.gz.sig"
+
+      - name: Rename macOS Intel updater archive
+        if: matrix.artifact == 'macos-intel-bundle'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MAC_DIR="src-tauri/target/release/bundle/macos"
+          mv "$MAC_DIR/iHostMC.app.tar.gz" "$MAC_DIR/iHostMC_${VERSION}_x64.app.tar.gz"
+          mv "$MAC_DIR/iHostMC.app.tar.gz.sig" "$MAC_DIR/iHostMC_${VERSION}_x64.app.tar.gz.sig"
+
       - name: Upload Windows artifacts
         if: matrix.artifact == 'windows-bundle'
         uses: actions/upload-artifact@v4
@@ -104,9 +120,9 @@ jobs:
           name: ${{ matrix.artifact }}
           path: |
             src-tauri/target/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/macos/*_aarch64.app.tar.gz
             src-tauri/target/release/bundle/dmg/*.sig
-            src-tauri/target/release/bundle/macos/*.sig
+            src-tauri/target/release/bundle/macos/*_aarch64.app.tar.gz.sig
 
       - name: Upload macOS Intel artifacts
         if: matrix.artifact == 'macos-intel-bundle'
@@ -115,9 +131,9 @@ jobs:
           name: ${{ matrix.artifact }}
           path: |
             src-tauri/target/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/macos/*_x64.app.tar.gz
             src-tauri/target/release/bundle/dmg/*.sig
-            src-tauri/target/release/bundle/macos/*.sig
+            src-tauri/target/release/bundle/macos/*_x64.app.tar.gz.sig
 
       - name: Upload Linux artifacts
         if: matrix.artifact == 'linux-bundle'
