@@ -9,12 +9,22 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}
+    name: Build ${{ matrix.name }}
     strategy:
       matrix:
-        os:
-          - windows-latest
-          - ubuntu-22.04
+        include:
+          - os: macos-14
+            name: macOS (Apple Silicon)
+            artifact: macos-arm64-bundle
+          - os: macos-13
+            name: macOS (Intel)
+            artifact: macos-intel-bundle
+          - os: windows-latest
+            name: Windows
+            artifact: windows-bundle
+          - os: ubuntu-22.04
+            name: Linux
+            artifact: linux-bundle
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -56,7 +66,6 @@ jobs:
         run: npm run ensure-env
 
       - name: Verify signing key (fail fast before long build)
-        if: runner.os == 'Windows'
         run: |
           node -e "require('fs').writeFileSync('verify.bin','x')"
           npx tauri signer sign verify.bin
@@ -75,27 +84,46 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      - name: Generate latest.json for updater
-        if: runner.os == 'Windows'
-        run: node scripts/gen-latest-json.cjs
-
       - name: Upload Windows artifacts
-        if: runner.os == 'Windows'
+        if: matrix.artifact == 'windows-bundle'
         uses: actions/upload-artifact@v4
         with:
-          name: windows-bundle
+          name: ${{ matrix.artifact }}
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.sig
-            src-tauri/target/release/bundle/nsis/latest.json
             src-tauri/target/release/bundle/msi/*.sig
+            src-tauri/target/release/bundle/nsis/*.sig
+            src-tauri/target/release/bundle/nsis/*.zip
+            src-tauri/target/release/bundle/nsis/*.tar.*
 
-      - name: Upload Linux artifacts
-        if: runner.os == 'Linux'
+      - name: Upload macOS ARM64 artifacts
+        if: matrix.artifact == 'macos-arm64-bundle'
         uses: actions/upload-artifact@v4
         with:
-          name: linux-bundle
+          name: ${{ matrix.artifact }}
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/dmg/*.sig
+            src-tauri/target/release/bundle/macos/*.sig
+
+      - name: Upload macOS Intel artifacts
+        if: matrix.artifact == 'macos-intel-bundle'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/dmg/*.sig
+            src-tauri/target/release/bundle/macos/*.sig
+
+      - name: Upload Linux artifacts
+        if: matrix.artifact == 'linux-bundle'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/rpm/*.rpm
@@ -128,12 +156,32 @@ jobs:
           name: windows-bundle
           path: artifacts/windows
 
+      - name: Download macOS ARM64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64-bundle
+          path: artifacts/macos-arm64
+          merge-multiple: true
+
+      - name: Download macOS Intel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-intel-bundle
+          path: artifacts/macos-intel
+          merge-multiple: true
+
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
         with:
           name: linux-bundle
           path: artifacts/linux
           merge-multiple: true
+
+      - name: Generate latest.json for updater (Windows + macOS)
+        run: |
+          node scripts/gen-latest-json.cjs \
+            --input-dir artifacts \
+            --output artifacts/latest.json
 
       - name: Create GitHub Release and upload artifacts
         uses: softprops/action-gh-release@v2
@@ -143,15 +191,30 @@ jobs:
           body: |
             ## iHostMC v${{ steps.version.outputs.version }}
 
-            Minecraft server manager — create, run, and back up servers. Share with friends via the iHost relay (no port forwarding). In-app updates are enabled on **Windows**.
+            Minecraft server manager — create, run, and back up servers. Share with friends via the iHost relay (no port forwarding). In-app updates are enabled on **Windows (x64)** and **macOS (Apple Silicon + Intel)**.
 
             ### Highlights
 
-            - **Relay / Share server:** fixed missing `getApiBaseUrl` import so relay configuration resolves correctly.
+            - Release built automatically for macOS (Apple Silicon + Intel), Windows, and Linux.
+            - See installer links below for your platform.
 
             ---
 
             ### Downloads
+
+            **macOS (Apple Silicon, arm64)**
+
+            | File | Notes |
+            |------|--------|
+            | **[iHostMC_${{ steps.version.outputs.version }}_aarch64.dmg](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_aarch64.dmg)** | Installer disk image for Apple Silicon Macs |
+            | **[latest.json](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/latest.json)** | Updater manifest used by the app |
+
+            **macOS (Intel, x64)**
+
+            | File | Notes |
+            |------|--------|
+            | **[iHostMC_${{ steps.version.outputs.version }}_x64.dmg](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/iHostMC_${{ steps.version.outputs.version }}_x64.dmg)** | Installer disk image for Intel Macs |
+            | **[latest.json](https://github.com/perlytiara/iHostMC/releases/download/v${{ steps.version.outputs.version }}/latest.json)** | Updater manifest used by the app |
 
             **Windows (x64)**
 
@@ -174,10 +237,13 @@ jobs:
 
             ### Updating
 
-            On Windows, open iHostMC — it will offer an update when a newer build is available — or reinstall from the **NSIS** link above. On Linux, install the new `.deb` or `.rpm` over the previous version.
+            On Windows and macOS (Apple Silicon or Intel), open iHostMC — it will offer an update when a newer build is available — or reinstall from the installer above. On Linux, install the new `.deb` or `.rpm` over the previous version.
           draft: false
           files: |
             artifacts/windows/**
+            artifacts/macos-arm64/**
+            artifacts/macos-intel/**
             artifacts/linux/**
+            artifacts/latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

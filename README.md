@@ -74,11 +74,13 @@ Dark theme, server list, one-click start—and **Share server** for a link your 
 ## Build & release
 
 - **Local build:** `npm run build:public`
-- **CI (GitHub Actions):** Set **Variables** and **Secrets** so release builds work:
+- **CI (GitHub Actions):** Releases now build **macOS (Apple Silicon/arm64 + Intel/x64)**, **Windows (x64)**, and **Linux (x86_64)** assets. Set **Variables** and **Secrets** so release builds work:
+
   ```bash
   npm run setup:gh                    # Variables (VITE_API_BASE_URL, VITE_WEBSITE_URL)
   npm run setup:gh -- --secrets       # Secrets from .env.gh-secrets (TAURI_SIGNING_*)
   ```
+
   Requires [gh CLI](https://cli.github.com/) and `gh auth login`. See [.github/SECRETS.md](.github/SECRETS.md) for details.
 
 ---
