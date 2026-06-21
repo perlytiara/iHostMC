@@ -3,7 +3,6 @@ import { AppLogo } from "./AppLogo";
 import { useTheme, THEMES } from "./theme-provider";
 import { useTranslation } from "react-i18next";
 import {
-  Home,
   Server,
   Settings,
   Sun,
@@ -15,7 +14,6 @@ import {
   Plus,
   Download,
   FolderOpen,
-  FolderArchive,
   Play,
   Square as StopIcon,
   Bug,
@@ -23,7 +21,6 @@ import {
   RefreshCw,
   LogOut,
   Wrench,
-  Sparkles,
 } from "lucide-react";
 import { useContext } from "react";
 import { cn, isTauri } from "@/lib/utils";
@@ -32,7 +29,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { AppPage } from "@/App";
 import type { MenuBarServerContext } from "@/App";
-import { SettingsNavContext, DeveloperMenuContext } from "@/App";
+import { DeveloperMenuContext } from "@/App";
 
 interface CustomTitleBarProps {
   currentPage: AppPage;
@@ -50,15 +47,11 @@ interface CustomTitleBarProps {
   isDownloadingUpdate: boolean;
 }
 
-function getNavItems(settingsAsIcon: boolean): { id: AppPage; icon: typeof Home; labelKey: string }[] {
-  const items: { id: AppPage; icon: typeof Home; labelKey: string }[] = [
-    { id: "home", icon: Home, labelKey: "nav.home" },
+function getNavItems(): { id: AppPage; icon: typeof Server; labelKey: string }[] {
+  return [
     { id: "servers", icon: Server, labelKey: "nav.servers" },
-    { id: "storage", icon: FolderArchive, labelKey: "nav.storage" },
-    { id: "ai", icon: Sparkles, labelKey: "nav.advisor" },
+    { id: "settings", icon: Settings, labelKey: "nav.account" },
   ];
-  if (!settingsAsIcon) items.push({ id: "settings", icon: Settings, labelKey: "nav.settings" });
-  return items;
 }
 
 const dropdownContentClass =
@@ -83,7 +76,6 @@ export function CustomTitleBar({
 }: CustomTitleBarProps) {
   const { t } = useTranslation();
   const { theme, setTheme, isDark } = useTheme();
-  const { settingsAsIcon } = useContext(SettingsNavContext);
   const { developerMenuEnabled } = useContext(DeveloperMenuContext);
 
   let win: ReturnType<typeof getCurrentWindow> | null = null;
@@ -108,13 +100,13 @@ export function CustomTitleBar({
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           className="cursor-pointer shrink-0"
-          onClick={() => onNavigate("home")}
+          onClick={() => onNavigate("servers")}
         >
           <AppLogo size={38} />
         </motion.div>
         <span
           className="ml-1.5 shrink-0 text-sm font-bold tracking-tight text-foreground cursor-pointer hidden md:inline"
-          onClick={() => onNavigate("home")}
+          onClick={() => onNavigate("servers")}
           data-tauri-drag-region
         >
           iHostMC
@@ -229,8 +221,8 @@ export function CustomTitleBar({
 
       {/* Center: Navigation tabs */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-2" data-tauri-drag-region>
-        <div className="flex shrink-0 items-center gap-0.5 md:gap-1 rounded-xl bg-muted/60 p-0.5 md:p-1 pointer-events-auto min-w-0 max-w-full">
-          {getNavItems(settingsAsIcon).map((item) => {
+        <div className="flex shrink-0 items-center gap-0.5 rounded-2xl bg-muted/60 p-0.5 md:p-1 pointer-events-auto min-w-0 max-w-full">
+          {getNavItems().map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
             return (
@@ -239,14 +231,14 @@ export function CustomTitleBar({
                 type="button"
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  "relative flex items-center gap-1 md:gap-1.5 rounded-lg px-2 md:px-3.5 py-1 md:py-1.5 text-xs font-medium transition-colors shrink-0",
+                  "relative flex items-center gap-1 md:gap-1.5 rounded-xl px-2 md:px-3.5 py-1 md:py-1.5 text-xs font-medium transition-colors shrink-0",
                   isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {isActive && (
                   <motion.div
                     layoutId="nav-pill"
-                    className="absolute inset-0 rounded-lg bg-primary shadow-sm"
+                    className="absolute inset-0 rounded-xl bg-primary shadow-sm"
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
@@ -262,21 +254,6 @@ export function CustomTitleBar({
 
       {/* Right: Settings icon (when settings-as-icon) + Hamburger app menu + Theme + Window controls */}
       <div className="ml-auto flex shrink-0 items-center gap-0.5 pr-0 min-w-0" data-tauri-drag-region>
-        {settingsAsIcon && (
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onNavigate("settings")}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-md transition-colors",
-              currentPage === "settings" ? "text-primary bg-primary/15" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            )}
-            aria-label={t("nav.settings")}
-          >
-            <Settings className="h-4 w-4" />
-          </motion.button>
-        )}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <motion.button
@@ -298,11 +275,8 @@ export function CustomTitleBar({
               <div className="px-2.5 py-1.5 text-[11px] text-muted-foreground border-b border-border mb-1">
                 {t("menu.version")}: v{APP_VERSION}
               </div>
-              <DropdownMenu.Item className={itemClass} onSelect={() => onNavigate("storage")}>
-                <FolderArchive className="h-3.5 w-3.5" /> {t("nav.storage")}
-              </DropdownMenu.Item>
               <DropdownMenu.Item className={itemClass} onSelect={() => onNavigate("settings")}>
-                <Settings className="h-3.5 w-3.5" /> {t("nav.settings")}
+                <Settings className="h-3.5 w-3.5" /> {t("nav.account")}
               </DropdownMenu.Item>
               {onCheckForUpdates && (
                 <DropdownMenu.Item className={itemClass} onSelect={onCheckForUpdates}>

@@ -62,7 +62,8 @@ export function AccountConnect({ onSuccess, compact, onBeforeLogin }: AccountCon
 
     const tryClaim = async (): Promise<void> => {
       if (Date.now() - (pollStartedRef.current ?? 0) > POLL_TIMEOUT_MS) {
-        setPhase("idle");
+        setPhase("error");
+        setSessionError("signInTimeout");
         setWaitingSessionId(null);
         pollStartedRef.current = null;
         return;
@@ -218,18 +219,21 @@ export function AccountConnect({ onSuccess, compact, onBeforeLogin }: AccountCon
   if (phase === "error" && sessionError) {
     const isNoApi = sessionError === "couldNotCreateLinkNoApi";
     const isUnreachable = sessionError === "serverUnreachable";
+    const isTimeout = sessionError === "signInTimeout";
     return (
       <div className={cn("rounded-xl border-2 border-destructive/40 bg-card/50 p-6", compact && "p-4")}>
         <div className="flex flex-col items-center gap-4 text-center">
           <p className="text-sm font-medium text-destructive">
-            {t(isNoApi ? "settings.backendNotConfigured" : isUnreachable ? "settings.serverUnreachable" : "settings.couldNotCreateLink")}
+            {t(isNoApi ? "settings.backendNotConfigured" : isUnreachable ? "settings.serverUnreachable" : isTimeout ? "settings.signInTimeout" : "settings.couldNotCreateLink")}
           </p>
           <p className="text-xs text-muted-foreground max-w-sm">
             {isNoApi
               ? t("settings.websiteUrlNotSet")
               : isUnreachable
                 ? t("settings.serverUnreachableHint")
-                : t("settings.couldNotCreateLinkHint")}
+                : isTimeout
+                  ? t("settings.signInTimeoutHint")
+                  : t("settings.couldNotCreateLinkHint")}
           </p>
           {apiBase && (
             <p className="text-xs text-muted-foreground/80 font-mono break-all max-w-sm">

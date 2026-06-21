@@ -50,14 +50,11 @@ function lazyWithTimeout<T extends ComponentType<unknown>>(
   );
 }
 
-const HomePage = lazyWithTimeout(() => import("@/features/home").then((m) => ({ default: m.HomePage })));
 const ServerList = lazyWithTimeout(() => import("@/features/servers").then((m) => ({ default: m.ServerList })));
-const StoragePage = lazyWithTimeout(() => import("@/features/storage").then((m) => ({ default: m.StoragePage })));
 const SettingsView = lazyWithTimeout(() => import("@/features/settings").then((m) => ({ default: m.SettingsView })));
-const AiPage = lazyWithTimeout(() => import("@/features/ai").then((m) => ({ default: m.AiPage })));
 const DevPage = lazyWithTimeout(() => import("@/components/DevPage").then((m) => ({ default: m.DevPage })));
 
-export type AppPage = "home" | "servers" | "storage" | "ai" | "settings" | "dev";
+export type AppPage = "servers" | "settings" | "dev";
 
 const SETTINGS_AS_ICON_KEY = "ihostmc-settings-as-icon";
 
@@ -146,17 +143,17 @@ class PageErrorBoundary extends Component<PageErrorBoundaryProps, PageErrorBound
 }
 
 function getStoredPage(): AppPage {
-  if (typeof window === "undefined") return "home";
+  if (typeof window === "undefined") return "servers";
   const saved = localStorage.getItem(PAGE_STORAGE_KEY) as AppPage | null;
-  if (saved === "home" || saved === "servers" || saved === "storage" || saved === "ai" || saved === "settings") return saved;
+  if (saved === "servers" || saved === "settings") return saved;
   if (saved === "dev" && import.meta.env.DEV) return "dev";
-  return "home";
+  return "servers";
 }
 
 function AppContent() {
   const { t } = useTranslation();
   // Start on Home so first paint only loads the Home chunk; restore stored page after mount to avoid blocking on heavy chunks
-  const [currentPage, setCurrentPage] = useState<AppPage>("home");
+  const [currentPage, setCurrentPage] = useState<AppPage>("servers");
   const [devMenuOpen, setDevMenuOpen] = useState(false);
   const [windowToolsOpen, setWindowToolsOpen] = useState(false);
   const [menuViewRequest, setMenuViewRequest] = useState<MenuViewRequest>(null);
@@ -207,13 +204,13 @@ function AppContent() {
   // Restore stored page after first paint so we don't block on loading a heavy chunk (servers/storage) at startup
   useEffect(() => {
     const stored = getStoredPage();
-    if (stored !== "home") setCurrentPage(stored);
+    if (stored !== "servers") setCurrentPage(stored);
   }, []);
 
   // Start highlight tour when on home and tour not yet completed (e.g. returning user who finished onboarding earlier)
   useEffect(() => {
     if (
-      currentPage === "home" &&
+      currentPage === "servers" &&
       onboardingComplete &&
       !getHighlightTourComplete() &&
       !highlightTourActive
@@ -407,11 +404,11 @@ function AppContent() {
 
   const handlePageLoadRecover = useCallback(() => {
     try {
-      localStorage.setItem(PAGE_STORAGE_KEY, "home");
+      localStorage.setItem(PAGE_STORAGE_KEY, "servers");
     } catch {
       // ignore
     }
-    setCurrentPage("home");
+    setCurrentPage("servers");
   }, []);
 
   const [settingsAsIcon, setSettingsAsIconState] = useState(() => getSettingsAsIconDefault());
@@ -471,23 +468,6 @@ function AppContent() {
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <PageErrorBoundary key={currentPage} onGoHome={handlePageLoadRecover}>
           <Suspense fallback={<LoadingScreen />}>
-          {currentPage === "home" && (
-            <PageTransition pageKey="home">
-              <HomePage
-                serverCount={serverCount}
-                runningCount={runningCount}
-                onCreateServer={handleNewServer}
-                onImportServer={handleImportServer}
-                onGoToServers={() => setCurrentPage("servers")}
-                onGoToAi={() => setCurrentPage("ai")}
-                onOpenAccount={() => {
-                  setInitialSettingsTab("account");
-                  setCurrentPage("settings");
-                }}
-              />
-            </PageTransition>
-          )}
-
           {currentPage === "servers" && (
             <PageTransition pageKey="servers">
               <ServerList
@@ -500,29 +480,15 @@ function AppContent() {
                 onMenuBarServerContextChange={setMenuBarServerContext}
                 onServerCountChange={setServerCount}
                 onRunningCountChange={setRunningCount}
-                onGoToHome={() => setCurrentPage("home")}
+                onGoToHome={() => setCurrentPage("servers")}
               />
             </PageTransition>
           )}
 
-          {currentPage === "storage" && (
-            <PageTransition pageKey="storage">
-              <StoragePage
-                onOpenAccount={() => { setInitialSettingsTab("account"); setCurrentPage("settings"); }}
-              />
-            </PageTransition>
-          )}
-          {currentPage === "ai" && (
-            <PageTransition pageKey="ai">
-              <AiPage
-                onOpenAccount={() => { setInitialSettingsTab("account"); setCurrentPage("settings"); }}
-              />
-            </PageTransition>
-          )}
           {currentPage === "settings" && (
             <PageTransition pageKey="settings">
               <SettingsView
-                onClose={() => { setCurrentPage("home"); setInitialSettingsTab(null); }}
+                onClose={() => { setCurrentPage("servers"); setInitialSettingsTab(null); }}
                 onEnsureAccountVisible={() => { setCurrentPage("settings"); setInitialSettingsTab("account"); }}
                 runInBackground={runInBackground}
                 onRunInBackgroundChange={setRunInBackground}
@@ -564,13 +530,13 @@ function AppContent() {
           try {
             localStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
           } catch {}
-          if (!getHighlightTourComplete() && currentPage === "home") {
+          if (!getHighlightTourComplete() && currentPage === "servers") {
             setHighlightTourStep(0);
             setHighlightTourActive(true);
           }
         }}
       />
-      {currentPage === "home" && (
+      {currentPage === "servers" && (
         <HighlightTourOverlay
           active={highlightTourActive}
           step={highlightTourStep}
