@@ -350,7 +350,7 @@ export function AdvisorLayout({ onOpenAccount }: AdvisorLayoutProps) {
     <div className="flex h-full min-h-0 w-full">
       {/* Sidebar: conversations */}
       <aside
-        className="flex shrink-0 flex-col border-r border-border bg-card/30 overflow-hidden"
+        className="flex shrink-0 flex-col border-r border-border/80 bg-card/60 backdrop-blur-sm overflow-hidden"
         style={{ width: sidebarWidth }}
       >
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">

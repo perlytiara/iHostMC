@@ -11,21 +11,48 @@ mod tunnel;
 mod upnp;
 
 use tauri::Emitter;
+use tauri::Manager;
+use tauri_plugin_deep_link::DeepLinkExt;
+
+fn focus_main_window(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn emit_deep_link_argv(app: &tauri::AppHandle, argv: &[String]) {
+    let urls: Vec<String> = argv
+        .iter()
+        .skip(1)
+        .filter(|a| a.starts_with("ihostmc:"))
+        .cloned()
+        .collect();
+    if !urls.is_empty() {
+        let _ = app.emit("deep-link-open", urls);
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init());
     #[cfg(desktop)]
     {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            focus_main_window(app);
+            #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+            let _ = &argv;
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            emit_deep_link_argv(app, &argv);
+        }));
+    }
+    builder = builder.plugin(tauri_plugin_deep_link::init());
+    #[cfg(desktop)]
+    {
         builder = builder
-            .plugin(tauri_plugin_single_instance::init(
-                |_app, argv, _cwd| {
-                    let _ = argv;
-                },
-            ))
             .plugin(tauri_plugin_updater::Builder::new().build())
             .plugin(tauri_plugin_autostart::init(
                 tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -120,6 +147,15 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                let urls: Vec<String> = event.urls().iter().map(|u| u.to_string()).collect();
+                if !urls.is_empty() {
+                    let _ = handle.emit("deep-link-open", urls);
+                }
+                focus_main_window(&handle);
+            });
+
             // System tray with app icon
             use tauri::menu::{MenuBuilder, MenuItemBuilder};
             use tauri::tray::TrayIconBuilder;

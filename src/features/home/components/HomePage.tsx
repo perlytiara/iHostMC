@@ -190,7 +190,7 @@ function HomeSignedIn({
       {hasServers ? (
         <motion.div
           variants={itemVariants}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 sm:px-5 sm:py-3.5"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card/60 backdrop-blur-sm px-4 py-3 sm:px-5 sm:py-3.5 shadow-sm"
         >
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/20">
@@ -227,7 +227,7 @@ function HomeSignedIn({
       ) : (
         <motion.div
           variants={itemVariants}
-          className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5"
+          className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-primary/20 bg-card/60 backdrop-blur-sm px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5 shadow-sm"
         >
           <p className="text-sm font-semibold text-foreground">{t("home.createYourOne")}</p>
           <div className="flex gap-2">
@@ -248,7 +248,7 @@ function HomeSignedIn({
         variants={itemVariants}
         className="grid min-h-0 grid-cols-2 gap-2 sm:gap-3"
       >
-        <Card className="border border-border/80 bg-card/50 py-2.5">
+        <Card className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm py-2.5 shadow-sm">
           <CardContent className="flex items-center gap-2 pt-0">
             <Cloudy className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">
@@ -262,7 +262,7 @@ function HomeSignedIn({
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-border/80 bg-card/50 py-2.5">
+        <Card className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm py-2.5 shadow-sm">
           <CardContent className="flex items-center gap-2 pt-0">
             <Server className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">
@@ -275,7 +275,7 @@ function HomeSignedIn({
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-border/80 bg-card/50 py-2.5">
+        <Card className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm py-2.5 shadow-sm">
           <CardContent className="flex items-center gap-2 pt-0">
             <Activity className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">
@@ -286,7 +286,7 @@ function HomeSignedIn({
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-border/80 bg-card/50 py-2.5">
+        <Card className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm py-2.5 shadow-sm">
           <CardContent className="flex items-center gap-2 pt-0">
             <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0">

@@ -114,7 +114,7 @@ export function StoragePage({ onOpenAccount }: StoragePageProps) {
     <div className="relative flex flex-1 flex-col overflow-hidden bg-background">
       <StatefulBackground running={false} />
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border bg-card/30 px-6 py-4">
+      <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FolderArchive className="h-5 w-5 text-muted-foreground" />
@@ -153,8 +153,18 @@ export function StoragePage({ onOpenAccount }: StoragePageProps) {
           <div className="mx-auto max-w-4xl space-y-6">
             {/* Storage usage */}
             {report && (
-              <section className="rounded-xl border border-border bg-card/50 p-4">
+              <section className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-foreground mb-3">{t("storage.usage", { defaultValue: "Storage usage" })}</h2>
+                {report.storageLimitBytes != null && report.storageLimitBytes > 0 && (
+                  <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{
+                        width: `${Math.min(100, (report.totalSizeBytes / report.storageLimitBytes) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-4 text-sm">
                   <span className="text-muted-foreground">
                     {t("storage.totalUsed", { defaultValue: "Used" })}: <span className="font-medium text-foreground">{formatBytes(report.totalSizeBytes)}</span>
@@ -172,7 +182,7 @@ export function StoragePage({ onOpenAccount }: StoragePageProps) {
             )}
 
             {/* Synced servers */}
-            <section className="rounded-xl border border-border bg-card/50 p-4">
+            <section className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-foreground mb-3">{t("storage.servers", { defaultValue: "Your servers" })}</h2>
               {syncedServers.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{t("storage.noServersSynced", { defaultValue: "No servers synced yet. Go to Servers → select a server → Backup & Sync." })}</p>
@@ -210,7 +220,7 @@ export function StoragePage({ onOpenAccount }: StoragePageProps) {
             </section>
 
             {/* Recent backups */}
-            <section className="rounded-xl border border-border bg-card/50 p-4">
+            <section className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-foreground mb-3">{t("storage.recentBackups", { defaultValue: "Recent backups" })}</h2>
               {backups.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{t("storage.noBackups", { defaultValue: "No backups yet. Create one from Servers → Backup & Sync." })}</p>

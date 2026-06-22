@@ -18,15 +18,16 @@ export interface AuthPayload {
 
 function parseAuthUrl(url: string): AuthPayload | null {
   try {
-    if (!url.startsWith(`${AUTH_SCHEME}:`) || !url.includes(AUTH_PATH)) return null;
-    const u = new URL(url);
+    const normalized = url.trim();
+    if (!normalized.toLowerCase().startsWith(`${AUTH_SCHEME}:`) || !normalized.includes(AUTH_PATH)) return null;
+    const u = new URL(normalized);
     const payloadB64 = u.searchParams.get("payload");
     if (!payloadB64) return null;
     const rawB64 = decodeURIComponent(payloadB64);
     const json = decodeURIComponent(escape(atob(rawB64.replace(/-/g, "+").replace(/_/g, "/"))));
     const data = JSON.parse(json) as AuthPayload & { exp?: number };
     if (!data.token || !data.userId || !data.email) return null;
-    if (typeof data.exp === "number" && Date.now() > data.exp) return null; // expired
+    if (typeof data.exp === "number" && Date.now() > data.exp) return null;
     return { token: data.token, userId: data.userId, email: data.email };
   } catch {
     return null;
@@ -36,12 +37,19 @@ function parseAuthUrl(url: string): AuthPayload | null {
 /** Parse ihostmc://auth?session=XXX (website-initiated; app polls backend to claim token). */
 function parseAuthSessionUrl(url: string): string | null {
   try {
-    if (!url.startsWith(`${AUTH_SCHEME}:`) || !url.includes(AUTH_PATH)) return null;
-    const u = new URL(url);
-    const sessionId = u.searchParams.get("session")?.trim();
-    return sessionId ?? null;
+    const normalized = url.trim();
+    if (!normalized.toLowerCase().startsWith(`${AUTH_SCHEME}:`)) return null;
+    const u = new URL(normalized);
+    const fromQuery = u.searchParams.get("session")?.trim();
+    if (fromQuery) return fromQuery;
+    if (u.pathname.includes(AUTH_PATH)) {
+      return u.searchParams.get("session")?.trim() ?? null;
+    }
+    const match = normalized.match(/[?&]session=([^&]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]).trim() : null;
   } catch {
-    return null;
+    const match = url.match(/[?&]session=([^&]+)/i);
+    return match?.[1] ? decodeURIComponent(match[1]).trim() : null;
   }
 }
 
@@ -73,8 +81,41 @@ function showSignedInToast(email: string): void {
   toast.success(`Signed in as ${email}`);
 }
 
+async function focusMainWindow(): Promise<void> {
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const win = getCurrentWindow();
+    await win.show();
+    await win.setFocus();
+  } catch {
+    // ignore
+  }
+}
+
+async function handleAuthUrls(urls: string[]): Promise<void> {
+  for (const url of urls) {
+    const payload = parseAuthUrl(url);
+    if (payload) {
+      if (await applyPayload(payload)) {
+        showSignedInToast(payload.email);
+        await focusMainWindow();
+      }
+      return;
+    }
+    const sessionId = parseAuthSessionUrl(url);
+    if (sessionId) {
+      if (await pollSessionAndSignIn(sessionId)) {
+        const u = useAuthStore.getState().user;
+        if (u?.email) showSignedInToast(u.email);
+        await focusMainWindow();
+      }
+      return;
+    }
+  }
+}
+
 /**
- * Listens for ihostmc://auth?payload=<base64> deep links and for dev server "deep-link-auth" event.
+ * Listens for ihostmc://auth deep links (session or payload) and dev server handoff events.
  * Signs the user in and shows a toast. Run only when isTauri() is true.
  */
 export function useDeepLinkAuth(): void {
@@ -83,77 +124,42 @@ export function useDeepLinkAuth(): void {
 
     let unsubOpenUrl: (() => void) | undefined;
     let unsubDevAuth: (() => void) | undefined;
+    let unsubRustDeepLink: (() => void) | undefined;
 
     (async () => {
-      // Register first so we don't miss an early POST from the website
-      const unsub = await listen<AuthPayload>("deep-link-auth", async (e) => {
+      const unsubDev = await listen<AuthPayload>("deep-link-auth", async (e) => {
         const p = e.payload;
         if (p?.token && p?.userId && p?.email) {
           try {
             if (await applyPayload(p)) {
               showSignedInToast(p.email);
-              try {
-                const { getCurrentWindow } = await import("@tauri-apps/api/window");
-                const win = getCurrentWindow();
-                win.show();
-                win.setFocus();
-              } catch {
-                // ignore
-              }
+              await focusMainWindow();
             }
           } catch {
             // ignore
           }
         }
       });
-      unsubDevAuth = () => {
-        unsub();
-      };
+      unsubDevAuth = () => unsubDev();
+
+      const unsubRust = await listen<string[]>("deep-link-open", (e) => {
+        if (e.payload?.length) handleAuthUrls(e.payload);
+      });
+      unsubRustDeepLink = () => unsubRust();
 
       const { getCurrent, onOpenUrl } = await import("@tauri-apps/plugin-deep-link");
       const urls = await getCurrent();
-      for (const url of urls ?? []) {
-        const payload = parseAuthUrl(url);
-        if (payload) {
-          if (await applyPayload(payload)) showSignedInToast(payload.email);
-          break;
-        }
-        const sessionId = parseAuthSessionUrl(url);
-        if (sessionId && (await pollSessionAndSignIn(sessionId))) {
-          const u = useAuthStore.getState().user;
-          if (u?.email) showSignedInToast(u.email);
-          break;
-        }
-      }
+      if (urls?.length) await handleAuthUrls(urls);
 
-      unsubOpenUrl = await onOpenUrl((urls) => {
-        for (const url of urls) {
-          const payload = parseAuthUrl(url);
-          if (payload) {
-            applyPayload(payload).then((ok) => ok && showSignedInToast(payload.email));
-            break;
-          }
-          const sessionId = parseAuthSessionUrl(url);
-          if (sessionId) {
-            pollSessionAndSignIn(sessionId).then((ok) => {
-              if (ok) {
-                const u = useAuthStore.getState().user;
-                if (u?.email) showSignedInToast(u.email);
-                import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
-                  getCurrentWindow().show();
-                  getCurrentWindow().setFocus();
-                }).catch(() => {});
-              }
-            });
-            break;
-          }
-        }
+      unsubOpenUrl = await onOpenUrl((incoming) => {
+        handleAuthUrls(incoming);
       });
     })();
 
     return () => {
       unsubOpenUrl?.();
       unsubDevAuth?.();
+      unsubRustDeepLink?.();
     };
   }, []);
 }

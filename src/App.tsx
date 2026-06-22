@@ -50,11 +50,15 @@ function lazyWithTimeout<T extends ComponentType<unknown>>(
   );
 }
 
+const HomePage = lazyWithTimeout(() => import("@/features/home").then((m) => ({ default: m.HomePage })));
 const ServerList = lazyWithTimeout(() => import("@/features/servers").then((m) => ({ default: m.ServerList })));
+const StoragePage = lazyWithTimeout(() => import("@/features/storage").then((m) => ({ default: m.StoragePage })));
 const SettingsView = lazyWithTimeout(() => import("@/features/settings").then((m) => ({ default: m.SettingsView })));
+const AiPage = lazyWithTimeout(() => import("@/features/ai").then((m) => ({ default: m.AiPage })));
 const DevPage = lazyWithTimeout(() => import("@/components/DevPage").then((m) => ({ default: m.DevPage })));
 
-export type AppPage = "servers" | "settings" | "dev";
+export type AppPage = "home" | "servers" | "storage" | "ai" | "settings" | "dev";
+export type SettingsTab = "general" | "account";
 
 const SETTINGS_AS_ICON_KEY = "ihostmc-settings-as-icon";
 
@@ -143,17 +147,17 @@ class PageErrorBoundary extends Component<PageErrorBoundaryProps, PageErrorBound
 }
 
 function getStoredPage(): AppPage {
-  if (typeof window === "undefined") return "servers";
+  if (typeof window === "undefined") return "home";
   const saved = localStorage.getItem(PAGE_STORAGE_KEY) as AppPage | null;
-  if (saved === "servers" || saved === "settings") return saved;
+  if (saved === "home" || saved === "servers" || saved === "storage" || saved === "ai" || saved === "settings") return saved;
   if (saved === "dev" && import.meta.env.DEV) return "dev";
-  return "servers";
+  return "home";
 }
 
 function AppContent() {
   const { t } = useTranslation();
   // Start on Home so first paint only loads the Home chunk; restore stored page after mount to avoid blocking on heavy chunks
-  const [currentPage, setCurrentPage] = useState<AppPage>("servers");
+  const [currentPage, setCurrentPage] = useState<AppPage>("home");
   const [devMenuOpen, setDevMenuOpen] = useState(false);
   const [windowToolsOpen, setWindowToolsOpen] = useState(false);
   const [menuViewRequest, setMenuViewRequest] = useState<MenuViewRequest>(null);
@@ -170,7 +174,8 @@ function AppContent() {
   const [serverCount, setServerCount] = useState(0);
   const [runningCount, setRunningCount] = useState(0);
   const [closeConfirm, setCloseConfirm] = useState<{ runningCount: number } | null>(null);
-  const [initialSettingsTab, setInitialSettingsTab] = useState<"general" | "account" | null>(null);
+  const [initialSettingsTab, setInitialSettingsTab] = useState<SettingsTab | null>(null);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab | null>(null);
   const [onboardingComplete, setOnboardingCompleteState] = useState(() =>
     typeof window !== "undefined" && !!localStorage.getItem(ONBOARDING_COMPLETE_KEY)
   );
@@ -204,13 +209,13 @@ function AppContent() {
   // Restore stored page after first paint so we don't block on loading a heavy chunk (servers/storage) at startup
   useEffect(() => {
     const stored = getStoredPage();
-    if (stored !== "servers") setCurrentPage(stored);
+    if (stored !== "home") setCurrentPage(stored);
   }, []);
 
   // Start highlight tour when on home and tour not yet completed (e.g. returning user who finished onboarding earlier)
   useEffect(() => {
     if (
-      currentPage === "servers" &&
+      currentPage === "home" &&
       onboardingComplete &&
       !getHighlightTourComplete() &&
       !highlightTourActive
@@ -228,9 +233,11 @@ function AppContent() {
     if (prev === null && user !== null) {
       setCurrentPage("settings");
       setInitialSettingsTab("account");
+      setActiveSettingsTab("account");
     } else if (prev !== null && user === null) {
       setCurrentPage("settings");
       setInitialSettingsTab("account");
+      setActiveSettingsTab("account");
     }
   }, [user]);
 
@@ -381,8 +388,20 @@ function AppContent() {
 
   const handleNavigate = useCallback((page: AppPage) => {
     setCurrentPage(page);
+    if (page !== "settings") setActiveSettingsTab(null);
     try {
       localStorage.setItem(PAGE_STORAGE_KEY, page);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleOpenSettings = useCallback((tab: SettingsTab) => {
+    setInitialSettingsTab(tab);
+    setActiveSettingsTab(tab);
+    setCurrentPage("settings");
+    try {
+      localStorage.setItem(PAGE_STORAGE_KEY, "settings");
     } catch {
       // ignore
     }
@@ -404,11 +423,11 @@ function AppContent() {
 
   const handlePageLoadRecover = useCallback(() => {
     try {
-      localStorage.setItem(PAGE_STORAGE_KEY, "servers");
+      localStorage.setItem(PAGE_STORAGE_KEY, "home");
     } catch {
       // ignore
     }
-    setCurrentPage("servers");
+    setCurrentPage("home");
   }, []);
 
   const [settingsAsIcon, setSettingsAsIconState] = useState(() => getSettingsAsIconDefault());
@@ -428,6 +447,8 @@ function AppContent() {
       <CustomTitleBar
         currentPage={currentPage}
         onNavigate={handleNavigate}
+        onOpenSettings={handleOpenSettings}
+        activeSettingsTab={activeSettingsTab}
         onNewServer={handleNewServer}
         onImportServer={handleImportServer}
         onDevMenu={() => setDevMenuOpen(true)}
@@ -468,6 +489,20 @@ function AppContent() {
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <PageErrorBoundary key={currentPage} onGoHome={handlePageLoadRecover}>
           <Suspense fallback={<LoadingScreen />}>
+          {currentPage === "home" && (
+            <PageTransition pageKey="home">
+              <HomePage
+                serverCount={serverCount}
+                runningCount={runningCount}
+                onCreateServer={handleNewServer}
+                onImportServer={handleImportServer}
+                onGoToServers={() => setCurrentPage("servers")}
+                onGoToAi={() => setCurrentPage("ai")}
+                onOpenAccount={() => handleOpenSettings("account")}
+              />
+            </PageTransition>
+          )}
+
           {currentPage === "servers" && (
             <PageTransition pageKey="servers">
               <ServerList
@@ -480,15 +515,27 @@ function AppContent() {
                 onMenuBarServerContextChange={setMenuBarServerContext}
                 onServerCountChange={setServerCount}
                 onRunningCountChange={setRunningCount}
-                onGoToHome={() => setCurrentPage("servers")}
+                onGoToHome={() => setCurrentPage("home")}
               />
+            </PageTransition>
+          )}
+
+          {currentPage === "storage" && (
+            <PageTransition pageKey="storage">
+              <StoragePage onOpenAccount={() => handleOpenSettings("account")} />
+            </PageTransition>
+          )}
+
+          {currentPage === "ai" && (
+            <PageTransition pageKey="ai">
+              <AiPage onOpenAccount={() => handleOpenSettings("account")} />
             </PageTransition>
           )}
 
           {currentPage === "settings" && (
             <PageTransition pageKey="settings">
               <SettingsView
-                onClose={() => { setCurrentPage("servers"); setInitialSettingsTab(null); }}
+                onClose={() => { setCurrentPage("home"); setInitialSettingsTab(null); setActiveSettingsTab(null); }}
                 onEnsureAccountVisible={() => { setCurrentPage("settings"); setInitialSettingsTab("account"); }}
                 runInBackground={runInBackground}
                 onRunInBackgroundChange={setRunInBackground}
@@ -530,13 +577,13 @@ function AppContent() {
           try {
             localStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
           } catch {}
-          if (!getHighlightTourComplete() && currentPage === "servers") {
+          if (!getHighlightTourComplete() && currentPage === "home") {
             setHighlightTourStep(0);
             setHighlightTourActive(true);
           }
         }}
       />
-      {currentPage === "servers" && (
+      {currentPage === "home" && (
         <HighlightTourOverlay
           active={highlightTourActive}
           step={highlightTourStep}

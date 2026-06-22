@@ -3,8 +3,12 @@ import { AppLogo } from "./AppLogo";
 import { useTheme, THEMES } from "./theme-provider";
 import { useTranslation } from "react-i18next";
 import {
+  Home,
   Server,
+  FolderArchive,
+  Sparkles,
   Settings,
+  UserCircle,
   Sun,
   Moon,
   Menu,
@@ -27,13 +31,15 @@ import { cn, isTauri } from "@/lib/utils";
 import { APP_VERSION } from "@/lib/version.generated";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type { AppPage } from "@/App";
+import type { AppPage, SettingsTab } from "@/App";
 import type { MenuBarServerContext } from "@/App";
 import { DeveloperMenuContext } from "@/App";
 
 interface CustomTitleBarProps {
   currentPage: AppPage;
   onNavigate: (page: AppPage) => void;
+  onOpenSettings: (tab: SettingsTab) => void;
+  activeSettingsTab: SettingsTab | null;
   onNewServer: () => void;
   onImportServer: () => void;
   onDevMenu: () => void;
@@ -47,10 +53,12 @@ interface CustomTitleBarProps {
   isDownloadingUpdate: boolean;
 }
 
-function getNavItems(): { id: AppPage; icon: typeof Server; labelKey: string }[] {
+function getNavItems(): { id: AppPage; icon: typeof Home; labelKey: string }[] {
   return [
+    { id: "home", icon: Home, labelKey: "nav.home" },
     { id: "servers", icon: Server, labelKey: "nav.servers" },
-    { id: "settings", icon: Settings, labelKey: "nav.account" },
+    { id: "storage", icon: FolderArchive, labelKey: "nav.storage" },
+    { id: "ai", icon: Sparkles, labelKey: "nav.advisor" },
   ];
 }
 
@@ -62,6 +70,8 @@ const itemClass =
 export function CustomTitleBar({
   currentPage,
   onNavigate,
+  onOpenSettings,
+  activeSettingsTab,
   onNewServer,
   onImportServer,
   onDevMenu,
@@ -85,6 +95,8 @@ export function CustomTitleBar({
     win = null;
   }
 
+  const onSettingsPage = currentPage === "settings";
+
   return (
     <div
       className="relative z-50 flex h-12 min-h-12 flex-shrink-0 items-stretch border-b select-none"
@@ -100,13 +112,13 @@ export function CustomTitleBar({
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           className="cursor-pointer shrink-0"
-          onClick={() => onNavigate("servers")}
+          onClick={() => onNavigate("home")}
         >
           <AppLogo size={38} />
         </motion.div>
         <span
           className="ml-1.5 shrink-0 text-sm font-bold tracking-tight text-foreground cursor-pointer hidden md:inline"
-          onClick={() => onNavigate("servers")}
+          onClick={() => onNavigate("home")}
           data-tauri-drag-region
         >
           iHostMC
@@ -221,7 +233,7 @@ export function CustomTitleBar({
 
       {/* Center: Navigation tabs */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-2" data-tauri-drag-region>
-        <div className="flex shrink-0 items-center gap-0.5 rounded-2xl bg-muted/60 p-0.5 md:p-1 pointer-events-auto min-w-0 max-w-full">
+        <div className="flex shrink-0 items-center gap-0.5 rounded-2xl bg-muted/60 p-0.5 md:p-1 pointer-events-auto min-w-0 max-w-full overflow-x-auto">
           {getNavItems().map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -231,7 +243,7 @@ export function CustomTitleBar({
                 type="button"
                 onClick={() => onNavigate(item.id)}
                 className={cn(
-                  "relative flex items-center gap-1 md:gap-1.5 rounded-xl px-2 md:px-3.5 py-1 md:py-1.5 text-xs font-medium transition-colors shrink-0",
+                  "relative flex items-center gap-1 md:gap-1.5 rounded-xl px-2 md:px-3 py-1 md:py-1.5 text-xs font-medium transition-colors shrink-0",
                   isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -244,7 +256,7 @@ export function CustomTitleBar({
                 )}
                 <span className="relative z-10 flex items-center gap-1 md:gap-1.5 whitespace-nowrap">
                   <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden md:inline">{t(item.labelKey)}</span>
+                  <span className="hidden lg:inline">{t(item.labelKey)}</span>
                 </span>
               </button>
             );
@@ -252,8 +264,41 @@ export function CustomTitleBar({
         </div>
       </div>
 
-      {/* Right: Settings icon (when settings-as-icon) + Hamburger app menu + Theme + Window controls */}
+      {/* Right: Profile + Settings + Hamburger + Window controls */}
       <div className="ml-auto flex shrink-0 items-center gap-0.5 pr-0 min-w-0" data-tauri-drag-region>
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onOpenSettings("account")}
+          title={t("nav.accountProfile")}
+          aria-label={t("nav.accountProfile")}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+            onSettingsPage && activeSettingsTab === "account"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          )}
+        >
+          <UserCircle className="h-4 w-4" />
+        </motion.button>
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => onOpenSettings("general")}
+          title={t("nav.settings")}
+          aria-label={t("nav.settings")}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-xl transition-colors",
+            onSettingsPage && activeSettingsTab === "general"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          )}
+        >
+          <Settings className="h-4 w-4" />
+        </motion.button>
+
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <motion.button
@@ -275,8 +320,14 @@ export function CustomTitleBar({
               <div className="px-2.5 py-1.5 text-[11px] text-muted-foreground border-b border-border mb-1">
                 {t("menu.version")}: v{APP_VERSION}
               </div>
-              <DropdownMenu.Item className={itemClass} onSelect={() => onNavigate("settings")}>
-                <Settings className="h-3.5 w-3.5" /> {t("nav.account")}
+              <DropdownMenu.Item className={itemClass} onSelect={() => onNavigate("storage")}>
+                <FolderArchive className="h-3.5 w-3.5" /> {t("nav.storage")}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item className={itemClass} onSelect={() => onOpenSettings("account")}>
+                <UserCircle className="h-3.5 w-3.5" /> {t("nav.account")}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item className={itemClass} onSelect={() => onOpenSettings("general")}>
+                <Settings className="h-3.5 w-3.5" /> {t("nav.settings")}
               </DropdownMenu.Item>
               {onCheckForUpdates && (
                 <DropdownMenu.Item className={itemClass} onSelect={onCheckForUpdates}>
